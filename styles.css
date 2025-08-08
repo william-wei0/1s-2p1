@@ -1,0 +1,75 @@
+body
+{
+    margin: 0;
+    padding: 0;
+    background: #222;
+}
+canvas {
+    height: 100%;
+    width: 100%;
+    display:inline-block;
+    vertical-align:top;
+}
+.dg.main.taller-than-window .close-button {
+    border-top: 1px solid #302f2f;
+}
+
+.dg.main .close-button {
+    background-color: #000000;
+}
+    
+.dg.main .close-button:hover {
+    background-color: #292828;
+}
+
+.dg {
+    color: #ffffff;
+    font-size: 12px;
+    text-shadow: none !important;
+}
+
+.dg.main::-webkit-scrollbar {
+    background: #000000;
+}
+
+.dg.main::-webkit-scrollbar-thumb {
+    background: #000000;
+}
+    
+.dg li:not(.folder) {
+    background: #000000;
+    border-bottom: 1px solid #ddd;
+}
+    
+.dg li.save-row .button {
+    text-shadow: none !important;
+}
+
+.dg li.title {
+    background: #000000 url(data:image/gif;base64,R0lGODlhBQAFAJEAAP////Pz8////////yH5BAEAAAIALAAAAAAFAAUAAAIIlI+hKgFxoCgAOw==) 6px 10px no-repeat;
+}
+
+.dg .cr.function:hover,.dg .cr.boolean:hover {
+    background: #000000;
+}
+    
+.dg .c input[type=text] {
+    background: #242323;
+}
+    
+.dg .c input[type=text]:hover {
+    background: #000000;
+}
+    
+.dg .c input[type=text]:focus {
+    background: #000000;
+    color: #555;
+}
+    
+.dg .c .slider {
+    background: #303030;
+}
+
+.dg .c .slider:hover {
+    background: #181818;
+}
