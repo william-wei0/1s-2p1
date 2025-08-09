@@ -62,7 +62,7 @@ function init(){
 
     camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR)
     scene.add(camera);
-    camera.position.set(6,3,6);
+    camera.position.set(-6,4,-6);
     camera.lookAt(scene.position);
     
 
@@ -153,14 +153,14 @@ function init(){
     const theta = [], phi = [];
     const geometry = new THREE.BufferGeometry();
     const isActive = new Float32Array(NUMPOINTS); // 1 = visible, 0 = hidden
-    const isLobe_1 = new Float32Array(NUMPOINTS)
+    const lobeType = new Float32Array(NUMPOINTS)
     for (let i = 0; i < NUMPOINTS; i++) {
       const x = (Math.random() - 0.5) * 13;
       const y = (Math.random() - 0.5) * 13;
       const z = (Math.random() - 0.5) * 13;
       const distance = Math.sqrt(x*x + y*y + z*z)
       
-      isLobe_1[i] = 1;
+      lobeType[i] = 0;
       
       isActive[i] = Math.random() > 0.5 ? 1.0 : 0.0;
       distance_from_origin_setup[i] = distance;
@@ -177,7 +177,7 @@ function init(){
       wavefunction_1s_at_point[i] = Math.E**(-distance);
       wavefunction_1s_at_point_squared[i] = wavefunction_1s_at_point[i]**2;
 
-      wavefunction_2pz_at_point[i] = 1.4*distance*Math.E**(-distance/2)*Math.sin(theta[i]);
+      wavefunction_2pz_at_point[i] = 0.35*distance*Math.E**(-distance/2)*Math.sin(theta[i]);
       wavefunction_2pz_at_point_squared[i] = wavefunction_2pz_at_point[i]**2;
     }
   
@@ -186,60 +186,28 @@ function init(){
     geometry.setAttribute('theta', new THREE.Float32BufferAttribute(theta, 1));
     geometry.setAttribute('phi', new THREE.Float32BufferAttribute(phi, 1));
     geometry.setAttribute('isActive', new THREE.BufferAttribute(isActive, 1));
-    geometry.setAttribute('isLobe_1', new THREE.BufferAttribute(isLobe_1, 1));
+    geometry.setAttribute('lobeType', new THREE.BufferAttribute(lobeType, 1));
 
     geometry.setAttribute('wavefunction_1s_at_point', new THREE.Float32BufferAttribute(wavefunction_1s_at_point, 1));
     geometry.setAttribute('wavefunction_2pz_at_point', new THREE.Float32BufferAttribute(wavefunction_2pz_at_point, 1));
     geometry.setAttribute('wavefunction_1s_at_point_squared', new THREE.Float32BufferAttribute(wavefunction_1s_at_point_squared, 1));
     geometry.setAttribute('wavefunction_2pz_at_point_squared', new THREE.Float32BufferAttribute(wavefunction_2pz_at_point_squared, 1));
 
-    // // === Shader Material with discard ===
-    // const material = new THREE.ShaderMaterial({
-    // vertexShader: `
-    //     attribute float isActive;
-    //     varying float vIsActive;
-    //     attribute float isLobe_1;
-    //     varying float visLobe_1;
-
-    //     void main() {
-    //     vIsActive = isActive;
-    //     visLobe_1 = isLobe_1;
-    //     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    //     gl_PointSize = 6.0;
-    //     }
-    // `,
-    // fragmentShader: `
-    //     varying float vIsActive;
-    //     varying float visLobe_1;
-
-    //     void main() {
-    //     if (vIsActive < 0.5) {discard;}
-    //     else{
-    //         if (visLobe_1 < 0.5) {
-    //             gl_FragColor = vec4(0.2, 0.8, 1.0, 1.0);
-    //         }
-    //         else {
-    //             gl_FragColor = vec4(1.0, 0.5, 0.5, 0.8);
-    //     }}
-    //     }
-    // `,
-    // transparent: true,
-    // });
-
     // === Shader Material with discard ===
     const material = new THREE.ShaderMaterial({
     vertexShader: `
         attribute float isActive;
         varying float vIsActive;
-        attribute float isLobe_1;
-        varying float visLobe_1;
+
+        attribute float lobeType;
+        flat out int vLobeType;
 
         uniform vec3 lightDirection;
         varying float vLight;
 
         void main() {
         vIsActive = isActive;
-        visLobe_1 = isLobe_1;
+        vLobeType = int(lobeType);
 
         vec3 normal = normalize(position);
         vLight = max(dot(normal, normalize(lightDirection)), 0.0);
@@ -250,7 +218,7 @@ function init(){
     `,
     fragmentShader: `
         varying float vIsActive;
-        varying float visLobe_1;
+        flat in int vLobeType;
         varying float vLight;
 
         void main() {
@@ -259,11 +227,19 @@ function init(){
             else{
                 float ambient = 0.5;
                 vec3 baseColor = vec3(0.2, 0.8, 1.0);
-                if (visLobe_1 < 0.5) {
-                    baseColor = vec3(0.2, 0.8, 1.0);
-                }
-                else {
-                    baseColor = vec3(1.0, 0.5, 0.5);
+
+                switch (vLobeType){
+                    case(0):
+                        baseColor = vec3(0.2, 0.8, 1.0);
+                        break;
+                    case(1):
+                        baseColor = vec3(1.0, 0.5, 0.5);
+                        break;
+                    case(2):
+                        baseColor = vec3(0.5, 1.0, 0.5);
+                        break;
+                    default:
+                        break;
                 }
                 vec3 shadedColor = baseColor * (ambient + vLight * 0.7);
                 gl_FragColor = vec4(shadedColor, 1.0);
@@ -343,7 +319,7 @@ function update()
     const wavefunction_1s_at_point_squared = points.geometry.attributes.wavefunction_1s_at_point_squared;
     const wavefunction_2pz_at_point_squared = points.geometry.attributes.wavefunction_2pz_at_point_squared;
     const phi = points.geometry.attributes.phi;
-    const isLobe_1 = points.geometry.attributes.isLobe_1;
+    const lobeType = points.geometry.attributes.lobeType;
     
 
     for (let i = 0; i < NUMPOINTS; i++) {
@@ -355,14 +331,40 @@ function update()
         //     is_active.array[i] = 1
         // }
 
-        if (Math.abs(2*wavefunction_1s_at_point.array[i]*wavefunction_2pz_at_point.array[i] * Math.cos(frame_count-phi.array[i])) > simulation.threshold/10){
+        // if (Math.abs(2*wavefunction_1s_at_point.array[i]*wavefunction_2pz_at_point.array[i] * Math.cos(frame_count-phi.array[i])) > simulation.threshold/10){
+        //     is_active.array[i] = 1;
+        //     if (2*wavefunction_1s_at_point.array[i]*wavefunction_2pz_at_point.array[i] * Math.cos(frame_count-phi.array[i]) > simulation.threshold/10){
+        //         isLobe_1.array[i] = 1;
+        //     }
+        //     else{
+        //         isLobe_1.array[i] = 0;
+        //     }
+
+        // }
+        // else{
+        //     is_active.array[i] = 0;
+        // }
+
+        if (simulation.n_proportion * wavefunction_1s_at_point_squared.array[i] + 
+            simulation.m_proportion * wavefunction_2pz_at_point_squared.array[i] +
+                    3 * simulation.n_proportion * simulation.m_proportion *
+                    wavefunction_1s_at_point.array[i]*wavefunction_2pz_at_point.array[i] *
+                    Math.cos(frame_count-phi.array[i]) > simulation.threshold/20){
             is_active.array[i] = 1;
-            if (2*wavefunction_1s_at_point.array[i]*wavefunction_2pz_at_point.array[i] * Math.cos(frame_count-phi.array[i]) > simulation.threshold/10){
-                isLobe_1.array[i] = 1;
-            }
-            else{
-                isLobe_1.array[i] = 0;
-            }
+                    
+            // if (2 * simulation.n_proportion * simulation.m_proportion *
+            //         wavefunction_1s_at_point.array[i]*wavefunction_2pz_at_point.array[i] *
+            //         Math.cos(frame_count-phi.array[i]) > simulation.threshold/10) {
+            //     lobeType.array[i] = 1;
+            // } 
+            // else if (2 * simulation.n_proportion * simulation.m_proportion *
+            //         wavefunction_1s_at_point.array[i]*wavefunction_2pz_at_point.array[i] *
+            //         Math.cos(frame_count-phi.array[i]) > 0) {
+            //     lobeType.array[i] = 2;
+            // }
+            // else{
+            //     lobeType.array[i] = 0;
+            // }
 
         }
         else{
@@ -370,7 +372,7 @@ function update()
         }
     }
     is_active.needsUpdate = true;
-    isLobe_1.needsUpdate = true;
+    lobeType.needsUpdate = true;
     
 	controls.update();
 	stats.update();
